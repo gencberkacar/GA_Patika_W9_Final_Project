@@ -1,219 +1,299 @@
-package com.View;
-
-import com.Helper.Config;
-import com.Helper.Helper;
-import com.Model.User;
-
-import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-import javax.swing.event.TableModelEvent;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-
-public class AdminGUI extends JFrame {
-    private ArrayList<User> searchUser;
-    private JPanel container;
-    private JButton btn_back;
-    private JLabel lbl_user_name;
-    private JTextField fld_user_name;
-    private JTextField fld_user_uname;
-    private JComboBox cmb_user_type;
-    private JLabel lbl_user_register;
-    private JLabel lbl_user_name_search;
-    private JLabel lbl_user_uname;
-    private JButton btn_search;
-    private JTable tbl_user_list;
-    private JTextField fld_user_name_add;
-    private JTextField fld_user_uname_add;
-    private JTextField fld_user_pass_add;
-    private JComboBox cmb_user_reg_add;
-    private JTextField fld_user_id_del;
-    private JButton btn_user_add;
-    private JButton btn_user_id_del;
-    private JLabel lbl_user_name_add;
-    private JLabel lbl_user_uname_add;
-    private JLabel lbl_user_pass_add;
-    private JLabel lbl_user_register_add;
-    private JTextField fld_user_mail_add;
-    private JLabel lbl_user_mail;
-    private DefaultTableModel mdl_user_list;
-    private Object[] row_user_list;
-
-    private User user;
-
-    public AdminGUI(User user) {
-        this.user = user;
-        this.add(container);
-        this.setTitle(Config.PROJECT_TİTLE);
-        this.setSize(1000, 500);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        this.setLocation(Helper.screenSize("x", getSize()), Helper.screenSize("y", getSize()));
-        this.setVisible(true);
-        lbl_user_name.setText("Welcome " + user.getUser_name());
-
-        mdl_user_list = new DefaultTableModel() {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                if (column == 0) {
-                    return false;
-                }
-                return super.isCellEditable(row, column);
-            }
-        };
-
-        //start to list the table
-        Object[] col_user_list = {"ID", "Name-Surname", "Username", "Password", "User E-mail", "Register Type"};
-        mdl_user_list.setColumnIdentifiers(col_user_list);
-        row_user_list = new Object[col_user_list.length];
-        loadUserModel();
-        tbl_user_list.setModel(mdl_user_list);
-        tbl_user_list.getTableHeader().setReorderingAllowed(false);
-        //end to list the table
-
-        //selected hotel id start
-        tbl_user_list.getSelectionModel().addListSelectionListener(e -> {
-            try {
-                String selected_id = tbl_user_list.getValueAt(tbl_user_list.getSelectedRow(), 0).toString();
-                fld_user_id_del.setText(selected_id);
-            } catch (Exception exception) {
-
-            }
-
-        });
-        //selected hotel id end
-
-        tbl_user_list.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                Point point = e.getPoint();
-                int selected_row = tbl_user_list.rowAtPoint(point);
-                tbl_user_list.setRowSelectionInterval(selected_row, selected_row);
-
-            }
-        });
-
-
-        tbl_user_list.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-            @Override
-            public void valueChanged(ListSelectionEvent e) {
-                try {
-                    int user_id = Integer.parseInt(tbl_user_list.getValueAt(tbl_user_list.getSelectedRow(), 0).toString());
-                    String selectedRow = tbl_user_list.getValueAt(tbl_user_list.getSelectedRow(), 0).toString();
-                    fld_user_id_del.setText(selectedRow);
-                } catch (Exception exception) {
-                    System.out.println(exception.getMessage());
-                }
-            }
-        });
-
-        btn_user_add.addActionListener(e -> {
-            if (Helper.isFieldEmpty(fld_user_pass_add) || Helper.isFieldEmpty(fld_user_uname_add) || Helper.isFieldEmpty(fld_user_name_add) || Helper.isFieldEmpty(fld_user_mail_add)) {
-                Helper.showMsg("fill");
-
-            } else {
-                String user_name = fld_user_name_add.getText();
-                String user_uname = fld_user_uname_add.getText();
-                String user_mail = fld_user_mail_add.getText();
-                String user_pass = fld_user_pass_add.getText();
-                String user_type = cmb_user_reg_add.getSelectedItem().toString();
-                if (User.add(user_name, user_uname, user_mail, user_pass, user_type)) {
-                    Helper.showMsg("add");
-                    loadUserModel();
-                    fld_user_name_add.setText(null);
-                    fld_user_uname_add.setText(null);
-                    fld_user_pass_add.setText(null);
-                    fld_user_mail_add.setText(null);
-                } else {
-                    Helper.showMsg("error");
-                }
-            }
-        });
-
-        btn_user_id_del.addActionListener(e -> {
-            if (Helper.isFieldEmpty(fld_user_id_del)) {
-                Helper.showMsg("fill");
-            } else {
-
-                int user_id = Integer.parseInt(fld_user_id_del.getText());
-                if (User.delete(user_id)) {
-                    Helper.showMsg("Selected ID deleted from the list!");
-                    loadUserModel();
-                    fld_user_id_del.setText(null);
-                } else {
-                    Helper.showMsg("error");
-                }
-
-            }
-        });
-
-
-        btn_search.addActionListener(e -> {
-            String user_name = fld_user_name.getText();
-            String user_uname = fld_user_uname.getText();
-            String user_type = cmb_user_type.getSelectedItem().toString();
-
-            if ("All".equals(user_type)) {
-                // List all users when "All" option is selected
-                ArrayList<User> allUsers = User.getList();
-                loadUserModel();
-                loadUserSearchModel(allUsers);
-            } else {
-                // Otherwise do normal filtering
-                String query = User.searchQuery(user_name, user_uname, user_type);
-                ArrayList<User> searchUser = User.searchUserList(query);
-                loadUserModel();
-                loadUserSearchModel(searchUser);
-            }
-        });
-
-
-
-        btn_back.addActionListener(e -> {
-            LoginGUI loginGUI = new LoginGUI();
-            dispose();
-        });
-
-
-    }
-
-
-    public void loadUserModel() {
-        DefaultTableModel clearModel = (DefaultTableModel) tbl_user_list.getModel();
-        clearModel.setRowCount(0);
-
-        for (User obj : User.getList()) {
-            row_user_list[0] = obj.getUser_id();
-            row_user_list[1] = obj.getUser_name();
-            row_user_list[2] = obj.getUser_uname();
-            row_user_list[3] = obj.getUser_pass();
-            row_user_list[4] = obj.getUser_mail();
-            row_user_list[5] = obj.getUser_type();
-            mdl_user_list.addRow(row_user_list);
-        }
-
-    }
-
-
-    public void loadUserSearchModel(ArrayList<User> list) {
-        DefaultTableModel clearModel = (DefaultTableModel) tbl_user_list.getModel();
-        clearModel.setRowCount(0);
-
-        for (User obj : list) {
-            row_user_list[0] = obj.getUser_id();
-            row_user_list[1] = obj.getUser_name();
-            row_user_list[2] = obj.getUser_uname();
-            row_user_list[3] = obj.getUser_pass();
-            row_user_list[4] = obj.getUser_mail();
-            row_user_list[5] = obj.getUser_type();
-            mdl_user_list.addRow(row_user_list);
-        }
-    }
-
-
-}
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="com.View.AdminGUI">
+  <grid id="27dc6" binding="container" layout-manager="GridLayoutManager" row-count="4" column-count="8" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+    <margin top="0" left="0" bottom="0" right="0"/>
+    <constraints>
+      <xy x="20" y="20" width="624" height="546"/>
+    </constraints>
+    <properties/>
+    <border type="none"/>
+    <children>
+      <grid id="fa7e5" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="0" left="0" bottom="0" right="0"/>
+        <constraints>
+          <grid row="0" column="1" row-span="1" col-span="7" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="6ca00" class="javax.swing.JLabel" binding="lbl_user_name">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Label"/>
+            </properties>
+          </component>
+          <component id="de6ea" class="javax.swing.JButton" binding="btn_back">
+            <constraints>
+              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Back"/>
+            </properties>
+          </component>
+          <hspacer id="c2d27">
+            <constraints>
+              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+          </hspacer>
+        </children>
+      </grid>
+      <grid id="1d7b4" layout-manager="GridLayoutManager" row-count="2" column-count="5" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="0" left="0" bottom="0" right="0"/>
+        <constraints>
+          <grid row="1" column="1" row-span="1" col-span="7" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="4cb99" class="javax.swing.JLabel" binding="lbl_user_name_search">
+            <constraints>
+              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Name-Surname"/>
+            </properties>
+          </component>
+          <component id="71340" class="javax.swing.JTextField" binding="fld_user_name">
+            <constraints>
+              <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+            </constraints>
+            <properties/>
+          </component>
+          <component id="be183" class="javax.swing.JLabel" binding="lbl_user_uname">
+            <constraints>
+              <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="User Name"/>
+            </properties>
+          </component>
+          <component id="bb3b7" class="javax.swing.JTextField" binding="fld_user_uname">
+            <constraints>
+              <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+            </constraints>
+            <properties/>
+          </component>
+          <component id="c675e" class="javax.swing.JComboBox" binding="cmb_user_type">
+            <constraints>
+              <grid row="1" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <model>
+                <item value="All"/>
+                <item value="employee"/>
+                <item value="user"/>
+                <item value="admin"/>
+              </model>
+            </properties>
+          </component>
+          <component id="b0fa6" class="javax.swing.JLabel" binding="lbl_user_register">
+            <constraints>
+              <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Register"/>
+            </properties>
+          </component>
+          <component id="5ab6c" class="javax.swing.JButton" binding="btn_search">
+            <constraints>
+              <grid row="1" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Search"/>
+            </properties>
+          </component>
+          <hspacer id="4d74b">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+            </constraints>
+          </hspacer>
+        </children>
+      </grid>
+      <scrollpane id="30842">
+        <constraints>
+          <grid row="2" column="1" row-span="1" col-span="5" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <component id="75c83" class="javax.swing.JTable" binding="tbl_user_list">
+            <constraints/>
+            <properties/>
+          </component>
+        </children>
+      </scrollpane>
+      <scrollpane id="f1c3f">
+        <constraints>
+          <grid row="2" column="6" row-span="1" col-span="2" vsize-policy="7" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <grid id="ddbdc" layout-manager="GridLayoutManager" row-count="14" column-count="5" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+            <margin top="0" left="0" bottom="0" right="0"/>
+            <constraints/>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="1b303" class="javax.swing.JLabel" binding="lbl_user_name_add">
+                <constraints>
+                  <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="Name-Surname"/>
+                </properties>
+              </component>
+              <vspacer id="35ab">
+                <constraints>
+                  <grid row="13" column="1" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
+                </constraints>
+              </vspacer>
+              <component id="80b86" class="javax.swing.JTextField" binding="fld_user_name_add">
+                <constraints>
+                  <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                    <preferred-size width="150" height="-1"/>
+                  </grid>
+                </constraints>
+                <properties/>
+              </component>
+              <component id="8f44f" class="javax.swing.JLabel" binding="lbl_user_uname_add">
+                <constraints>
+                  <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="Username"/>
+                </properties>
+              </component>
+              <component id="51421" class="javax.swing.JTextField" binding="fld_user_uname_add">
+                <constraints>
+                  <grid row="3" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                    <preferred-size width="150" height="-1"/>
+                  </grid>
+                </constraints>
+                <properties/>
+              </component>
+              <component id="89f80" class="javax.swing.JLabel" binding="lbl_user_pass_add">
+                <constraints>
+                  <grid row="4" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="Password"/>
+                </properties>
+              </component>
+              <component id="9c267" class="javax.swing.JTextField" binding="fld_user_pass_add">
+                <constraints>
+                  <grid row="5" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                    <preferred-size width="150" height="-1"/>
+                  </grid>
+                </constraints>
+                <properties/>
+              </component>
+              <component id="bc49a" class="javax.swing.JLabel" binding="lbl_user_register_add">
+                <constraints>
+                  <grid row="8" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="Register"/>
+                </properties>
+              </component>
+              <component id="86c6b" class="javax.swing.JTextField" binding="fld_user_id_del">
+                <constraints>
+                  <grid row="11" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                    <preferred-size width="150" height="-1"/>
+                  </grid>
+                </constraints>
+                <properties>
+                  <enabled value="false"/>
+                </properties>
+              </component>
+              <component id="b33d9" class="javax.swing.JButton" binding="btn_user_add">
+                <constraints>
+                  <grid row="10" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="User Add"/>
+                </properties>
+              </component>
+              <component id="ba1ed" class="javax.swing.JButton" binding="btn_user_id_del">
+                <constraints>
+                  <grid row="12" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="Delete User"/>
+                </properties>
+              </component>
+              <hspacer id="b7e9c">
+                <constraints>
+                  <grid row="2" column="4" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                </constraints>
+              </hspacer>
+              <component id="d0a9a" class="javax.swing.JComboBox" binding="cmb_user_reg_add">
+                <constraints>
+                  <grid row="9" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <model>
+                    <item value="employee"/>
+                    <item value="user"/>
+                    <item value="admin"/>
+                  </model>
+                </properties>
+              </component>
+              <component id="d2996" class="javax.swing.JLabel" binding="lbl_user_mail">
+                <constraints>
+                  <grid row="6" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties>
+                  <text value="E-mail"/>
+                </properties>
+              </component>
+              <component id="74cc1" class="javax.swing.JTextField" binding="fld_user_mail_add">
+                <constraints>
+                  <grid row="7" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                    <preferred-size width="150" height="-1"/>
+                  </grid>
+                </constraints>
+                <properties/>
+              </component>
+              <hspacer id="43989">
+                <constraints>
+                  <grid row="1" column="3" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                </constraints>
+              </hspacer>
+              <hspacer id="264a5">
+                <constraints>
+                  <grid row="3" column="2" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                </constraints>
+              </hspacer>
+              <hspacer id="54ea">
+                <constraints>
+                  <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                </constraints>
+              </hspacer>
+            </children>
+          </grid>
+        </children>
+      </scrollpane>
+      <hspacer id="96470">
+        <constraints>
+          <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+        </constraints>
+      </hspacer>
+      <grid id="f501f" layout-manager="GridLayoutManager" row-count="1" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="0" left="0" bottom="0" right="0"/>
+        <constraints>
+          <grid row="3" column="1" row-span="1" col-span="6" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children/>
+      </grid>
+    </children>
+  </grid>
+</form>
